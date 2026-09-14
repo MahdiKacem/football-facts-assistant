@@ -1,0 +1,3 @@
+- NER: same entity tagged multiple times across title+description (e.g. "Manchester United" + separately "United", "City") — not wrong per-mention, just needed dedup logic in extract_entities().
+- Zero-shot: "live commentary" article classified as "transfer" (0.40 — low confidence, model genuinely uncertain). Root cause: candidate label set didn't include a "live match" category, so model was forced to pick the least-bad fit among ill-suited options.
+  Fix: added more labels, and a confidence threshold (<0.5 -> "uncertain") so low-confidence guesses aren't silently treated as ground truth downstream.
