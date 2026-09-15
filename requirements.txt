@@ -2,3 +2,8 @@ requests
 dotenv
 transformers
 torch
+langchain_community
+langchain_text_splitters 
+langchain_core
+langchain_qdrant
+langchain_huggingface
