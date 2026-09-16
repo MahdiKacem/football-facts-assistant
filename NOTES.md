@@ -1,3 +1,5 @@
 - NER: same entity tagged multiple times across title+description (e.g. "Manchester United" + separately "United", "City") — not wrong per-mention, just needed dedup logic in extract_entities().
 - Zero-shot: "live commentary" article classified as "transfer" (0.40 — low confidence, model genuinely uncertain). Root cause: candidate label set didn't include a "live match" category, so model was forced to pick the least-bad fit among ill-suited options.
   Fix: added more labels, and a confidence threshold (<0.5 -> "uncertain") so low-confidence guesses aren't silently treated as ground truth downstream.
+
+- Tested 500/k=2 vs 800/k=3 on 4 manual queries. Confirmed via direct PDF search that the back-pass-to-keeper query has NO matching content in the IFAB PDF at all — not a retrieval failure, just a genuinely unanswerable question given this corpus. Excluding that case, 500/k=2 outperforms 800/k=3 (800 diluted embeddings enough to lose the handball match). Decision: keep chunk_size=500, k_rules=2.

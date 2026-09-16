@@ -1,6 +1,8 @@
 requests
 dotenv
 transformers
+sentence-transformers
+pypdf
 torch
 langchain_community
 langchain_text_splitters 

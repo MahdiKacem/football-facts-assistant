@@ -61,16 +61,16 @@ def ingest_stats(stats_snapshots: list[dict]) -> QdrantVectorStore:
     print(f"Successfully ingested {len(all_docs)} stat snapshots into Qdrant collection '{STATS_COLLECTION}'")
     return vector_store
 
-def get_rules_store(collection_name: str) -> QdrantVectorStore:
-    return QdrantVectorStore(
-        embeddings=embeddings,
+def get_rules_store() -> QdrantVectorStore:
+    return QdrantVectorStore.from_existing_collection(
+        embedding=embeddings,
         url=QDRANT_URL,
         collection_name=RULES_COLLECTION
     )
 
-def get_stats_store(collection_name: str) -> QdrantVectorStore:
-    return QdrantVectorStore(
-        embeddings=embeddings,
+def get_stats_store() -> QdrantVectorStore:
+    return QdrantVectorStore.from_existing_collection(
+        embedding=embeddings,
         url=QDRANT_URL,
         collection_name=STATS_COLLECTION
     )
