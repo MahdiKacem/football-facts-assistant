@@ -2,6 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from transformers import pipeline
+from src.state import State
 
 load_dotenv()
 
@@ -64,3 +65,20 @@ class NewsAgent:
             "all_scores": dict(zip(result["labels"], [score for score in result["scores"]]))
 
         }
+
+    def news_node(self, state: State) -> dict:
+        query = state.get("news_query", state.get("query"))
+        if not query:
+            raise ValueError("news_node requires query or news_query in state")
+
+        articles = self.fetch_football_news(query, limit=state.get("news_limit", 50))
+        enriched_articles = []
+        for article in articles:
+            text = f"{article['title']}: {article['description'] or ''}"
+            enriched_articles.append({
+                **article,
+                "entities": self.extract_entities(text),
+                "topic": self.classify_topic(text),
+            })
+
+        return {"news_data": enriched_articles}

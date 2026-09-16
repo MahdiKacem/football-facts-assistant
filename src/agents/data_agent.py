@@ -2,6 +2,7 @@ import os
 import time
 import requests 
 from dotenv import load_dotenv
+from src.state import State
 
 load_dotenv()
 
@@ -67,3 +68,32 @@ class DataAgent:
         a = next((s for s in scorers if player_a_name.lower() in s["player_name"].lower()), None)
         b = next((s for s in scorers if player_b_name.lower() in s["player_name"].lower()), None)
         return {"player_a": a, "player_b": b, "competition": competition_code}
+
+    def data_node(self, state: State) -> dict:
+        if "team_id" in state:
+            return {"stats_data": self.get_team_stats(state["team_id"])}
+
+        competition_code = state.get("competition_code")
+        player_a_name = state.get("player_a_name")
+        player_b_name = state.get("player_b_name")
+
+        if player_a_name and player_b_name and competition_code:
+            return {
+                "stats_data": self.compare_players(
+                    player_a_name,
+                    player_b_name,
+                    competition_code,
+                )
+            }
+
+        if competition_code:
+            return {
+                "stats_data": {
+                    "competition": competition_code,
+                    "scorers": self.get_competition_scorers(competition_code),
+                }
+            }
+
+        raise ValueError(
+            "data_node requires team_id, competition_code, or player comparison fields"
+        )
