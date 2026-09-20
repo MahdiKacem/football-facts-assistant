@@ -10,3 +10,4 @@ langchain_core
 langchain_qdrant
 langchain_huggingface
 langchain_ollama
+langgraph

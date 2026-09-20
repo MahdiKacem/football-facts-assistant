@@ -14,6 +14,7 @@ class State(TypedDict, total=False):
     competition_code: str
     player_a_name: str
     player_b_name: str
+    resolution_notes: str
     stats_data: dict
     news_data: list
     retrieved_context: list

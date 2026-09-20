@@ -3,9 +3,12 @@ import time
 import requests 
 from dotenv import load_dotenv
 from src.state import State
+from src.utils.entity_extraction import extract_person_names
+from src.utils.competition_lookup import resolve_competition_code
+
 
 load_dotenv()
-
+DEFAULT_COMPETITION = "PL"
 class DataAgent:
     def __init__(self):
         self.football_data_api_key = os.getenv("FOOTBALL_DATA_API_KEY")
@@ -70,7 +73,25 @@ class DataAgent:
         return {"player_a": a, "player_b": b, "competition": competition_code}
 
     def data_node(self, state: State) -> dict:
-        if "team_id" in state:
+        # Backfill structured fields from the raw query if they weren't
+        # already provided (e.g. by a test harness or an earlier node).
+        if "player_a_name" not in state or "player_b_name" not in state:
+            names = extract_person_names(state["query"])
+            if len(names) >= 2:
+                state = {**state, "player_a_name": names[0], "player_b_name": names[1]}
+
+        if "competition_code" not in state:
+            code = resolve_competition_code(state["query"])
+            if code:
+                state = {**state, "competition_code": code}
+
+        resolved_fields = {
+            field: state[field]
+            for field in ("player_a_name", "player_b_name", "competition_code")
+            if state.get(field)
+        }
+
+        if state.get("team_id"):
             return {"stats_data": self.get_team_stats(state["team_id"])}
 
         competition_code = state.get("competition_code")
@@ -80,10 +101,9 @@ class DataAgent:
         if player_a_name and player_b_name and competition_code:
             return {
                 "stats_data": self.compare_players(
-                    player_a_name,
-                    player_b_name,
-                    competition_code,
-                )
+                    player_a_name, player_b_name, competition_code,
+                ),
+                **resolved_fields,
             }
 
         if competition_code:
@@ -91,9 +111,15 @@ class DataAgent:
                 "stats_data": {
                     "competition": competition_code,
                     "scorers": self.get_competition_scorers(competition_code),
-                }
+                },
+                **resolved_fields,
             }
 
-        raise ValueError(
-            "data_node requires team_id, competition_code, or player comparison fields"
-        )
+        return {
+            "stats_data": {},
+            **resolved_fields,
+            "resolution_notes": (
+                "Could not resolve a competition from the query. "
+                "Specify a competition to compare player statistics."
+            ),
+        }

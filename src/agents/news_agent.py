@@ -1,5 +1,6 @@
 import os
 import requests
+from src.utils.entity_extraction import extract_person_names
 from dotenv import load_dotenv
 from transformers import pipeline
 from src.state import State
@@ -35,13 +36,14 @@ class NewsAgent:
 
         return [
             {
+                "id": f"news_{i}",
                 "title": article["title"],
                 "description": article.get("description", "No description available"),
                 "source": article["source"]["name"],
                 "url": article["url"],
                 "publishedAt": article["publishedAt"]
             }
-            for article in data.get("articles", [])
+            for i, article in enumerate(data.get("articles", []))
         ]
 
     def extract_entities(self, text: str) -> list[dict]:
@@ -70,6 +72,10 @@ class NewsAgent:
         query = state.get("news_query", state.get("query"))
         if not query:
             raise ValueError("news_node requires query or news_query in state")
+
+        names = extract_person_names(query)
+        if len(names) >= 2:
+            query = " ".join(names)
 
         articles = self.fetch_football_news(query, limit=state.get("news_limit", 50))
         enriched_articles = []
