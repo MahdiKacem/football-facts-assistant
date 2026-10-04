@@ -38,6 +38,22 @@ class AnalystAgent:
             )
             return {"draft_answer": answer}
 
+        if player_a or player_b:
+            comparison_parts = []
+            for player in (player_a, player_b):
+                if player:
+                    comparison_parts.append(
+                        f"{player['player_name']} has {player['goals']} goals "
+                        f"and {player['assists']} assists [SOURCE:stats_data]."
+                    )
+                else:
+                    missing_name = state.get("player_b_name") or state.get("player_a_name")
+                    comparison_parts.append(
+                        f"No stats_data record was returned for {missing_name} "
+                        f"[SOURCE:stats_data]."
+                    )
+            return {"draft_answer": " ".join(comparison_parts)}
+
         context_blob = json.dumps({
             "stats_data": stats,
             "news_data": state.get("news_data", {}),

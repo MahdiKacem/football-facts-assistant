@@ -3,3 +3,7 @@
   Fix: added more labels, and a confidence threshold (<0.5 -> "uncertain") so low-confidence guesses aren't silently treated as ground truth downstream.
 
 - Tested 500/k=2 vs 800/k=3 on 4 manual queries. Confirmed via direct PDF search that the back-pass-to-keeper query has NO matching content in the IFAB PDF at all — not a retrieval failure, just a genuinely unanswerable question given this corpus. Excluding that case, 500/k=2 outperforms 800/k=3 (800 diluted embeddings enough to lose the handball match). Decision: keep chunk_size=500, k_rules=2.
+
+- Injected-fault test: hardcodes Mbappe's goals to `15` while the comparison narrative says he and Yamal are level on goals. The Fact-Checker correctly marks the claim as `contradicted`, not `unsupported`.
+
+- Live adversarial query: `Compare Erling Haaland and Mohamed Salah's goals in the 2026/27 Premier League this season`. The API returned Haaland with 5 goals and no Salah record. The Analyst did not invent Salah's number, but its narrative stated the comparison data was unavailable and repeated Haaland's 5 without any `[SOURCE:...]` citations. The Fact-Checker produced no flags because its claim parser only processes cited claims. This is a prompt/citation failure, not a clean adversarial-test pass.

@@ -3,6 +3,7 @@ import re
 from langchain_ollama import ChatOllama
 
 CLAIM_PATTERN = re.compile(r"([^\n.]*[^\s.])\s*\[SOURCE:([^\]]+)\]")
+SOURCE_TAG_PATTERN = re.compile(r"\[SOURCE:[^\]]+\]")
 VERIFY_PROMPT = """
     You are a fact-checking agent. You will be given one claim and the evidence chunk it cited. Decide:
     - "supported": evidence clearly backs the claim
@@ -37,6 +38,37 @@ class FactCheckerAgent:
         draft_answer = state["draft_answer"]
         flagged = []
         verified_answer = draft_answer
+
+        # Every factual sentence must identify evidence. Uncited text cannot be
+        # checked by the evidence loop below, so fail it closed as unsupported.
+        sentences = re.split(r"(?<=[.!?])\s+", draft_answer.strip())
+        for sentence in sentences:
+            sentence = sentence.strip()
+            source_tags = list(SOURCE_TAG_PATTERN.finditer(sentence))
+            if sentence and not source_tags:
+                flagged.append({
+                    "claim_text": sentence,
+                    "evidence_chunk_id": None,
+                    "severity": "unsupported",
+                    "rationale": "Claim has no inline source citation",
+                })
+                verified_answer = verified_answer.replace(
+                    sentence, f"{sentence} [UNVERIFIED]", 1
+                )
+            elif source_tags:
+                trailing_claim = sentence[source_tags[-1].end():].strip()
+                if trailing_claim.strip(" \t,;:.!?"):
+                    flagged.append({
+                        "claim_text": trailing_claim,
+                        "evidence_chunk_id": None,
+                        "severity": "unsupported",
+                        "rationale": "Claim has no inline source citation",
+                    })
+                    verified_answer = verified_answer.replace(
+                        trailing_claim,
+                        f"{trailing_claim} [UNVERIFIED]",
+                        1,
+                    )
 
         for match in CLAIM_PATTERN.finditer(draft_answer):
             claim_text = match.group(1).strip()
