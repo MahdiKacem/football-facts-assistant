@@ -1,4 +1,4 @@
-requests
+requests>=2.33.0,<3
 dotenv
 transformers
 sentence-transformers
@@ -11,3 +11,5 @@ langchain_qdrant
 langchain_huggingface
 langchain_ollama
 langgraph
+fastapi
+uvicorn[standard]
