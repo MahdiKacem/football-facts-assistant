@@ -20,7 +20,7 @@ class DataAgent:
     def _get(self, endpoint: str, params: dict = None, max_retries: int = 3):
         url = f"{self.base_url}/{endpoint}"
         for attempt in range(max_retries):
-            resp = requests.get(url, headers=self.headers, params=params)
+            resp = requests.get(url, headers=self.headers, params=params, timeout=30)
             # rate-limit handling (HTTP 429 -> wait and retry)
             if resp.status_code == 429:
                 wait = int(resp.headers.get("Retry-After", 6))

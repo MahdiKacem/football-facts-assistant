@@ -30,7 +30,7 @@ class NewsAgent:
             "sortBy": "publishedAt",
             "apiKey": self.news_api_key
         }
-        response = requests.get(self.news_api_url, params=params)
+        response = requests.get(self.news_api_url, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
 

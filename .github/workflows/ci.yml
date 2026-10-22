@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Compile Python source
+        run: python -m compileall -q src tests
+
+      - name: Run unit tests
+        run: python -m pytest tests
+
+      - name: Run SAST scan with Bandit
+        run: bandit -r src --severity-level high -f json -o bandit-report.json
+
+      - name: Run SCA scan with pip-audit
+        run: pip-audit -r requirements.txt --strict -f json -o pip-audit-report.json
+
+      - name: Upload security scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-reports
+          path: |
+            bandit-report.json
+            pip-audit-report.json
+          if-no-files-found: ignore
+
+  dast:
+    name: Ephemeral deployment and DAST
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Deploy application to ephemeral environment
+        env:
+          FOOTBALL_DATA_API_KEY: ci-placeholder
+          NEWSAPI_API_KEY: ci-placeholder
+          DAST_DEMO_VULNERABILITY: "1"
+        run: |
+          nohup python -m uvicorn src.api:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          echo "APP_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for application health check
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat api.log
+          exit 1
+
+      - name: Run OWASP ZAP DAST scan
+        run: |
+          docker run --rm --network host \
+            -v "$PWD:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-full-scan.py \
+              -t 'http://127.0.0.1:8000/dast-demo?value=%3Cscript%3Ealert(1)%3C%2Fscript%3E' \
+              -l WARN \
+              -J zap-report.json \
+              -r zap-report.html \
+              -I
+
+      - name: Fail on critical DAST findings
+        run: |
+          jq -e '
+            [.site[]?.alerts[]? | select((.riskcode | tonumber) >= 3)]
+            | length == 0
+          ' zap-report.json
+
+      - name: Upload DAST reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dast-reports
+          path: |
+            zap-report.json
+            zap-report.html
+            api.log
+          if-no-files-found: ignore
+
+      - name: Stop ephemeral application
+        if: always()
+        run: |
+          if [ -n "${APP_PID:-}" ]; then
+            kill "$APP_PID" || true
+          fi
