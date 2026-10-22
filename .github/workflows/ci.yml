@@ -36,10 +36,10 @@ jobs:
         run: python -m pytest tests
 
       - name: Run SAST scan with Bandit
-        run: bandit -r src -f json -o bandit-report.json
+        run: bandit -r src --severity-level high -f json -o bandit-report.json
 
       - name: Run SCA scan with pip-audit
-        run: pip-audit -r requirements.txt -f json -o pip-audit-report.json
+        run: pip-audit -r requirements.txt --strict -f json -o pip-audit-report.json
 
       - name: Upload security scan reports
         if: always()
