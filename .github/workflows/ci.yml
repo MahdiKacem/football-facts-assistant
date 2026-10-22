@@ -99,7 +99,7 @@ jobs:
             ghcr.io/zaproxy/zaproxy:stable \
             zap-full-scan.py \
               -t 'http://127.0.0.1:8000/dast-demo?value=%3Cscript%3Ealert(1)%3C%2Fscript%3E' \
-              -l 3 \
+              -l WARN \
               -J zap-report.json \
               -r zap-report.html \
               -I
