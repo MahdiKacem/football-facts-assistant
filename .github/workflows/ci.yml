@@ -95,6 +95,10 @@ jobs:
       - name: Run OWASP ZAP DAST scan
         run: |
           docker volume create zap-work >/dev/null
+          cleanup() {
+            docker rm "$container_id" >/dev/null 2>&1 || true
+            docker volume rm zap-work >/dev/null 2>&1 || true
+          }
           container_id="$(docker create --network host \
             --mount source=zap-work,target=/zap/wrk \
             ghcr.io/zaproxy/zaproxy:stable \
@@ -104,17 +108,14 @@ jobs:
               -J zap-report.json \
               -r zap-report.html \
               -I)"
-          scan_status=0
-          docker start --attach "$container_id" || scan_status=$?
+          trap cleanup EXIT
+          docker start "$container_id" >/dev/null
+          scan_status="$(docker wait "$container_id")"
           if ! docker cp "$container_id:/zap/wrk/zap-report.json" zap-report.json; then
             docker logs "$container_id"
-            docker rm "$container_id"
-            docker volume rm zap-work
             exit 1
           fi
           docker cp "$container_id:/zap/wrk/zap-report.html" zap-report.html
-          docker rm "$container_id"
-          docker volume rm zap-work
           if [ "$scan_status" -ne 0 ]; then
             echo "ZAP exited with status $scan_status; report-based severity gating will run next."
           fi
