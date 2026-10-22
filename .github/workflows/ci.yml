@@ -76,6 +76,7 @@ jobs:
         env:
           FOOTBALL_DATA_API_KEY: ci-placeholder
           NEWSAPI_API_KEY: ci-placeholder
+          DAST_DEMO_VULNERABILITY: "1"
         run: |
           nohup python -m uvicorn src.api:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
           echo "APP_PID=$!" >> "$GITHUB_ENV"
@@ -96,8 +97,8 @@ jobs:
           docker run --rm --network host \
             -v "$PWD:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py \
-              -t http://127.0.0.1:8000 \
+            zap-full-scan.py \
+              -t 'http://127.0.0.1:8000/dast-demo?value=%3Cscript%3Ealert(1)%3C%2Fscript%3E' \
               -l 3 \
               -J zap-report.json \
               -r zap-report.html \

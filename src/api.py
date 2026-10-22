@@ -1,4 +1,7 @@
+import os
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from src.graph import build_graph
@@ -20,6 +23,13 @@ class QueryRequest(BaseModel):
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/dast-demo", response_class=HTMLResponse)
+def dast_demo(value: str = "") -> str:
+    if os.getenv("DAST_DEMO_VULNERABILITY") != "1":
+        raise HTTPException(status_code=404, detail="Not found")
+    return f"<html><body>Value: {value}</body></html>"
 
 
 @app.post("/query")
