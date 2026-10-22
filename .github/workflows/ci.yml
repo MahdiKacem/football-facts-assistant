@@ -95,6 +95,10 @@ jobs:
       - name: Run OWASP ZAP DAST scan
         run: |
           docker volume create zap-work >/dev/null
+          docker run --rm \
+            --mount source=zap-work,target=/zap/wrk \
+            alpine:3.20 \
+            chmod 777 /zap/wrk
           cleanup() {
             docker rm "$container_id" >/dev/null 2>&1 || true
             docker volume rm zap-work >/dev/null 2>&1 || true
