@@ -1,4 +1,5 @@
 import os
+from html import escape
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -29,7 +30,7 @@ def health() -> dict[str, str]:
 def dast_demo(value: str = "") -> str:
     if os.getenv("DAST_DEMO_VULNERABILITY") != "1":
         raise HTTPException(status_code=404, detail="Not found")
-    return f"<html><body>Value: {value}</body></html>"
+    return f"<html><body>Value: {escape(value)}</body></html>"
 
 
 @app.post("/query")
