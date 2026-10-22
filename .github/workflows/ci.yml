@@ -34,3 +34,19 @@ jobs:
 
       - name: Run unit tests
         run: python -m pytest tests
+
+      - name: Run SAST scan with Bandit
+        run: bandit -r src -f json -o bandit-report.json
+
+      - name: Run SCA scan with pip-audit
+        run: pip-audit -r requirements.txt -f json -o pip-audit-report.json
+
+      - name: Upload security scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-reports
+          path: |
+            bandit-report.json
+            pip-audit-report.json
+          if-no-files-found: ignore
