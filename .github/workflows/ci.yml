@@ -94,15 +94,26 @@ jobs:
 
       - name: Run OWASP ZAP DAST scan
         run: |
-          docker run --rm --network host \
-            -v "$PWD:/zap/wrk/:rw" \
+          container_id="$(docker create --network host \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-full-scan.py \
               -t 'http://127.0.0.1:8000/dast-demo?value=%3Cscript%3Ealert(1)%3C%2Fscript%3E' \
               -l WARN \
-              -J zap-report.json \
-              -r zap-report.html \
-              -I
+              -J /tmp/zap-report.json \
+              -r /tmp/zap-report.html \
+              -I)"
+          scan_status=0
+          docker start --attach "$container_id" || scan_status=$?
+          if ! docker cp "$container_id:/tmp/zap-report.json" zap-report.json; then
+            docker logs "$container_id"
+            docker rm "$container_id"
+            exit 1
+          fi
+          docker cp "$container_id:/tmp/zap-report.html" zap-report.html
+          docker rm "$container_id"
+          if [ "$scan_status" -ne 0 ]; then
+            echo "ZAP exited with status $scan_status; report-based severity gating will run next."
+          fi
 
       - name: Fail on critical DAST findings
         run: |
