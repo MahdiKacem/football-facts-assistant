@@ -95,6 +95,7 @@ jobs:
       - name: Run OWASP ZAP DAST scan
         run: |
           docker run --rm --network host \
+            --user "$(id -u):$(id -g)" \
             -v "$PWD:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-full-scan.py \
